@@ -25,6 +25,7 @@
 #define _IN_ATARI_H_
 
 #include "atari_compat.h"
+#include "../game/types.h"
 
 typedef struct
 {
@@ -35,7 +36,6 @@ typedef struct
 } SMouse;
 
 extern SMouse 	g_mouseInfo;
-extern int		reset_mouse_deltas;
 
 extern void atari_ikbd_init();
 extern void atari_ikbd_shutdown();
@@ -45,5 +45,7 @@ extern void atari_timer_shutdown();
 extern unsigned long atari_ticks_count;
 
 extern void ATARI_Quit( void );
+
+extern int32 PatchAtariMixrate( int32 mixrate );
 
 #endif

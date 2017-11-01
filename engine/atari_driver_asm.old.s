@@ -26,7 +26,9 @@
 	
 	.globl	_g_scancodeBuffer
 	.globl	_g_scancodeBufferHead
+	.globl	_g_scancodeShiftDepressed
 	.globl	_g_mouseInfo
+	.globl	_reset_mouse_deltas
 	
 	.globl	_atari_timer_init
 	.globl	_atari_timer_shutdown
@@ -64,20 +66,7 @@ _atari_ikbd_shutdown:
 	movea.l	d0,a0
 	move.l	old_ikbdsys,(32.w,a0)
 	
-read_key:
-	move.w	#11,-(sp)			| Cconis()
-	trap	#1
-	addq.l	#2,sp
-
-	tst.w	d0
-	beq.b	empty
-
-	move.w	#8,-(sp)			| Cnecin()
-	trap	#1
-	addq.l	#2,sp
-	bra.b	read_key
-
-empty:	movem.l	(sp)+,d2-d7/a2-a6
+	movem.l	(sp)+,d2-d7/a2-a6
 	rts
 	
 
@@ -115,6 +104,17 @@ new_ikbdsys:
 	|beq.w	joy_event
 	
 not_ikbd_packet:
+	cmp.b	#0x2a,d1
+	bne.b	shift_not_pressed
+	move.l	#1,_g_scancodeShiftDepressed
+	bra.b	shift_skip
+
+shift_not_pressed:
+	cmp.b	#0x36,d1
+	bne.b	shift_skip
+	move.l	#1,_g_scancodeShiftDepressed
+
+shift_skip:
 	lea	_g_scancodeBuffer,a0
 	move.l	_g_scancodeBufferHead,d0
 	
@@ -125,7 +125,7 @@ not_ikbd_packet:
 	move.l	d0,_g_scancodeBufferHead
 	
 	movem.l	(sp)+,d0-d1/a0
-	jmp	([old_ikbdsys])
+	|jmp	([old_ikbdsys])
 	rts
 
 mouse_status:
@@ -212,8 +212,15 @@ mouse_ikbd_sys_1:
 	move.b	0xfffffc02,d0
 	dc.w	0x49c0				| extb	d0
 	
-	add.l	d0,(0.w,a0)			| save as mx
+	tst.l	_reset_mouse_deltas
+	bne.b	reset_mx
+	
+	add.l	d0,(0.w,a0)
+	bra.b	skip_mx
+reset_mx:
+	move.l	d0,(0.w,a0)			| save as mx
 
+skip_mx:
 	movea.l	ikbdsys_pointer,a0
 	move.l	#mouse_ikbd_sys_2,(a0)		| set pointer to proceed relative y
 	
@@ -228,8 +235,17 @@ mouse_ikbd_sys_2:
 	move.b	0xfffffc02,d0
 	dc.w	0x49c0				| extb	d0
 	
-	add.l	d0,(4.w,a0)			| save as my
+	tst.l	_reset_mouse_deltas
+	bne.b	reset_my
+	
+	add.l	d0,(4.w,a0)
+	bra.b	skip_my
 
+reset_my:
+	move.l	d0,(4.w,a0)			| save as my
+	clr.l	_reset_mouse_deltas
+	
+skip_my:
 	movea.l	ikbdsys_pointer,a0
 	move.l	#new_ikbdsys,(a0)		| set original pointer
 	
@@ -298,6 +314,8 @@ restore_timer:
 	
 
 timer_d:
+	addq.l	#1,_atari_ticks_count
+	
 	movem.l	d0-a6,-(sp)
 	
 	jsr	_timerhandler
@@ -307,6 +325,16 @@ timer_d:
 	rte
 	
 	
+| ----------------------------------------------
+	.data
+| ----------------------------------------------
+	
+_reset_mouse_deltas:
+	dc.l	1				| true
+_atari_ticks_count:
+	.long	0
+	
+
 | ----------------------------------------------
 	.bss
 | ----------------------------------------------

@@ -46,6 +46,8 @@ extern int stricmp(const char *x, const char *y);
 
 #include "_functio.h"
 
+#include "atari_driver.h"
+
 //
 // Sound variables
 //
@@ -663,9 +665,22 @@ void CONFIG_ReadSetup( void )
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "VoiceToggle",&VoiceToggle);
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "AmbienceToggle",&AmbienceToggle);
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "NumVoices",&NumVoices);
+   
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "NumChannels",&NumChannels);
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "NumBits",&NumBits);
+   #ifdef PLATFORM_ATARI
+   if( NumBits == 16 && NumChannels == 1 )
+   {
+   	// we don't have mono 16bit
+   	NumChannels = 2;
+   }
+   #endif
+   
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "MixRate",&MixRate);
+   #ifdef PLATFORM_ATARI
+   MixRate = PatchAtariMixrate( MixRate );
+   #endif
+   
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "MidiPort",&MidiPort);
    SCRIPT_GetNumber( scripthandle, "Sound Setup", "BlasterAddress",&dummy);
    BlasterConfig.Address = dummy;

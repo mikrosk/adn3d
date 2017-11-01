@@ -177,7 +177,7 @@ boolean CONTROL_FlagActive( int32 which )
 
 void CONTROL_ClearAssignments( void )
 {
-	STUBBED("CONTROL_ClearAssignments");
+	//STUBBED("CONTROL_ClearAssignments");
 }
 
 void CONTROL_GetUserInput( UserInput *info )

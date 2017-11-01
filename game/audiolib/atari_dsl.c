@@ -24,6 +24,7 @@
 #include <mint/falcon.h>
 #include <mint/osbind.h>
 #include <mint/ostruct.h>
+#include <string.h>
 
 #include "atari_dsl_asm.h"
 
@@ -196,13 +197,51 @@ int   DSL_BeginBufferedPlayback( char *BufferStart,
 	memset( blank_buf[0], 0, _chunksize );
 	memset( blank_buf[1], 0, _chunksize );
 	
-	// hard-wired 24585 Hz, stereo, 16 bits
 	Sndstatus( SND_RESET );
 	Soundcmd( ADDERIN, MATIN );	/* input from connection matrix */
 	
-	//Devconnect( DMAPLAY, DAC, CLK25M, CLK12K, NO_SHAKE );	/* DMA playback -> DAC */
-	Devconnect( DMAPLAY, DAC, CLK25M, CLK25K, NO_SHAKE );	/* DMA playback -> DAC */
-	Setmode( MODE_STEREO16 );
+	/* DMA playback -> DAC */
+	switch( SampleRate )
+	{
+		case 8195:
+			Devconnect( DMAPLAY, DAC, CLK25M, CLK8K, NO_SHAKE );
+		break;
+		
+		case 12292:
+			Devconnect( DMAPLAY, DAC, CLK25M, CLK12K, NO_SHAKE );
+		break;
+		
+		case 16390:
+			Devconnect( DMAPLAY, DAC, CLK25M, CLK16K, NO_SHAKE );
+		break;
+		
+		case 24585:
+			Devconnect( DMAPLAY, DAC, CLK25M, CLK25K, NO_SHAKE );
+		break;
+		
+		case 49170:
+			Devconnect( DMAPLAY, DAC, CLK25M, CLK50K, NO_SHAKE );
+		break;
+		
+		default:
+			Devconnect( 0x0000, DAC, CLK25M, CLK12K, NO_SHAKE );	/* nothing -> DAC */
+		break;
+	}
+	
+	if( ( MixMode & STEREO ) && ( MixMode & SIXTEEN_BIT ) )
+	{
+		Setmode( MODE_STEREO16 );
+	}
+	else if( ( MixMode & STEREO ) && !( MixMode & SIXTEEN_BIT ) )
+	{
+		Setmode( MODE_STEREO8 );
+	}
+	else
+	{
+		// mono 8bit
+		Setmode( MODE_MONO );
+	}
+	
 	
 	Dsptristate( DSP_TRISTATE, DSP_TRISTATE );
 	

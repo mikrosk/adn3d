@@ -2,7 +2,7 @@
  * atari_driver.c -- system handling for Atari Falcon 060
  *
  * Copyright (c) 2006 Miro Kropacek; miro.kropacek@gmail.com
- * 
+ *
  * This file is part of the Atari Duke Nukem 3D project, 3D shooter game by 3D Realms,
  * for Atari Falcon 060 computers.
  *
@@ -48,6 +48,8 @@
 #include "cache1d.h"
 
 #include "atari_driver.h"
+#include "../game/types.h"
+#include "../game/keyboard.h"
 
 //#define NO_ATARI_KEYBOARD
 
@@ -75,7 +77,6 @@ static char *titleshort = NULL;
 unsigned char g_scancodeBuffer[SCANCODE_BUFFER_SIZE];
 int g_scancodeBufferHead = 0;
 int g_scancodeBufferTail = 0;
-int g_scancodeShiftDepressed = 0;
 static unsigned char lastkey = 0x00;
 
 long frameplace, imageSize;
@@ -84,8 +85,46 @@ long bytesperline;
 char permanentupdate = 0, vgacompatible;
 long buffermode, origbuffermode, linearmode;
 
-SMouse g_mouseInfo;
+SMouse g_mouseInfo = { 0 };
 
+static unsigned char scancodeTable[256] =
+{
+	sc_None, sc_Escape, sc_1, sc_2, sc_3, sc_4, sc_5, sc_6,
+	sc_7, sc_8, sc_9, sc_0, sc_Minus, sc_Equals, sc_BackSpace, sc_Tab,
+	sc_Q, sc_W, sc_E, sc_R, sc_T, sc_Y, sc_U, sc_I,
+	sc_O, sc_P, sc_OpenBracket, sc_CloseBracket, sc_Enter, sc_LeftControl, sc_A, sc_S,
+	sc_D, sc_F, sc_G, sc_H, sc_J, sc_K, sc_L, sc_SemiColon,
+	sc_Quote, sc_Tilde, sc_LeftShift, sc_BackSlash, sc_Z, sc_X, sc_C,
+	sc_V, sc_B, sc_N, sc_M, sc_Comma, sc_Period, sc_Slash, sc_RightShift,
+	sc_None, sc_LeftAlt, sc_Space, sc_CapsLock, sc_F1, sc_F2, sc_F3, sc_F4,
+
+	sc_F5, sc_F6, sc_F7, sc_F8, sc_F9, sc_F10, sc_None, sc_None,
+	sc_Home, sc_UpArrow, sc_None, sc_kpad_Minus, sc_LeftArrow, sc_None, sc_RightArrow,
+	sc_kpad_Plus, sc_None, sc_DownArrow, sc_None, sc_Insert, sc_Delete, sc_None, sc_None,
+	sc_BackSlash, sc_F11, sc_F12, sc_None, sc_kpad_Slash, sc_Kpad_Star, sc_Kpad_Star, sc_kpad_7,
+	sc_kpad_8, sc_kpad_9, sc_kpad_4, sc_kpad_5, sc_kpad_6, sc_kpad_1, sc_kpad_2, sc_kpad_3,
+	sc_kpad_0, sc_kpad_Period, sc_kpad_Enter, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None,
+	sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None, sc_None
+};
 
 /* lousy -ansi flag.  :) */
 static char *string_dupe(const char *str)
@@ -99,31 +138,44 @@ static char *string_dupe(const char *str)
 void _handle_events(void)
 {
 	unsigned char scancode;
-	
+
 	while( g_scancodeBufferHead != g_scancodeBufferTail )
 	{
 		scancode = g_scancodeBuffer[g_scancodeBufferTail++];
 		g_scancodeBufferTail &= SCANCODE_BUFFER_SIZE-1;
-		
-		lastkey = scancode;
-		keyhandler();
+
+		if( scancodeTable[scancode & 0x7f] != sc_None )
+		{
+			lastkey = scancodeTable[scancode & 0x7f];
+			
+			if( ( scancode & 0x80 ) != 0 )
+			{
+				lastkey |= 0x80;	/* +128 signifies that the key is released in DOS. */
+			}
+
+			keyhandler();
+			//printf( "Scancode: %x\n", scancode );
+		}
+		else
+		{
+			//printf( "Scancode (none): %x\n", scancode );
+		}
 	}
-	
+
 	mouse_relative_x = g_mouseInfo.mx;
 	mouse_relative_y = g_mouseInfo.my;
-	
-	reset_mouse_deltas = TRUE;
+
 	g_mouseInfo.mx = 0;
 	g_mouseInfo.my = 0;
-	
+
     mouse_x += mouse_relative_x;
     mouse_y += mouse_relative_y;
-    
+
     if (mouse_x < 0) mouse_x = 0;
     if (mouse_x > SCREEN_WIDTH - 1) mouse_x = SCREEN_WIDTH - 1;
     if (mouse_y < 0) mouse_y = 0;
     if (mouse_y > SCREEN_HEIGHT - 1) mouse_y = SCREEN_HEIGHT - 1;
-    
+
 	if( g_mouseInfo.leftButtonDepressed == TRUE )
 	{
 		g_mouseInfo.leftButtonDepressed = FALSE;
@@ -133,7 +185,7 @@ void _handle_events(void)
 	{
 		mouse_buttons &= 0xfe;
 	}
-	
+
 	if( g_mouseInfo.rightButtonDepressed == TRUE )
 	{
 		g_mouseInfo.rightButtonDepressed = FALSE;
@@ -195,15 +247,15 @@ void _platform_init(int argc, char **argv, const char *title, const char *icon)
 
     titlelong = string_dupe(title);
     titleshort = string_dupe(icon);
-    
+
 	// clear scancode buffer
 	memset( g_scancodeBuffer, 0, SCANCODE_BUFFER_SIZE );
-	
+
 	// setup new ikbd handler
 	#ifndef NO_ATARI_KEYBOARD
 	atari_ikbd_init();
 	#endif
-	
+
     if( ATARI_ScreenInit() == FALSE )
     {
     	ATARI_Quit();
@@ -249,33 +301,33 @@ void setvmode(int mode)
 	{
 		printf( "Mode 0x%x not supported on ATARI!\n", mode );
 	}
-	
+
 	return;
-	
+
 } /* setvmode */
 
 int _setgamemode(char davidoption, long daxdim, long daydim)
 {
 	int i, j;
-	
+
 	frameplace = (long)g_pChunkyBuffer;
 	screen = g_pChunkyBuffer;
 	imageSize = SCREEN_WIDTH * SCREEN_HEIGHT;
-	
+
 	xdim = SCREEN_WIDTH;
 	ydim = SCREEN_HEIGHT;
-	
+
 	vgacompatible = 1;
     linearmode = 1;
     qsetmode = SCREEN_HEIGHT;
     activepage = visualpage = 0;
     horizlookup = horizlookup2 = NULL;
     bytesperline = SCREEN_WIDTH;
-    
+
     // alloc lookup tables
     horizlookup = (long*)malloc( ydim*4*sizeof(long) );
     horizlookup2 = (long*)malloc( ydim*4*sizeof(long) );
-    
+
     j = 0;
     for(i = 0; i <= ydim; i++)
     {
@@ -291,9 +343,9 @@ int _setgamemode(char davidoption, long daxdim, long daydim)
     setvlinebpl(bytesperline);
 
     if (searchx < 0) { searchx = halfxdimen; searchy = (ydimen>>1); }
-    
+
 	ATARI_ScreenSet();
-	
+
 	last_render_ticks = getticks();
 	return 0;
 } /* setgamemode */
@@ -328,11 +380,19 @@ int VBE_setPalette(long start, long num, char *palettebuffer)
 
 	sdlp += 3;
     }
-    
+
 	ATARI_SetPalette( fmt_swap, start, num );
-	
+
 	return TRUE;
 } /* VBE_setPalette */
+
+void ATARI_FlushKeyboard( void )
+{
+	while( Cconis() != 0 )
+	{
+		Cnecin();
+	}
+}
 
 void ATARI_Quit( void )
 {
@@ -340,6 +400,7 @@ void ATARI_Quit( void )
 	#ifndef NO_ATARI_KEYBOARD
 	atari_ikbd_shutdown();
 	#endif
+	ATARI_FlushKeyboard();
 }
 
 void _uninitengine(void)
@@ -352,7 +413,7 @@ int setupmouse(void)
     mouse_x = SCREEN_WIDTH / 2;
     mouse_y = SCREEN_HEIGHT / 2;
     mouse_relative_x = mouse_relative_y = 0;
-    
+
     return(1);
 } /* setupmouse */
 
@@ -393,7 +454,7 @@ void _nextpage(void)
 
     //if (qsetmode == 200)
 	//AMIGA_PutPixels((unsigned char*)frameplace,surface->w,surface->h);
-	
+
 	ATARI_ScreenUpdate();
 
     ticks = getticks();
@@ -446,7 +507,7 @@ void uninittimer(void)
 
 unsigned long getticks(void)
 {
-	return atari_ticks_count;
+	return totalclock;
 } /* getticks */
 
 
@@ -661,7 +722,7 @@ void fillscreen16(long offset, long color, long blocksize)
 
     pixels = get_framebuffer();
 
-    if (!pageoffset) { 
+    if (!pageoffset) {
 	    offset = offset << 3;
 	    offset += 640*336;
     }
@@ -711,5 +772,36 @@ void drawpixel16(long offset)
     //drawpixel(((long) surface->pixels + offset), drawpixel_color);
 } /* drawpixel16 */
 
+
+// patch PC mixrates to atari values
+int32 PatchAtariMixrate( int32 mixrate )
+{
+	switch( mixrate )
+	{
+		case 8000:
+			return 8195;
+		break;
+
+		case 11000:
+			return 12292;
+		break;
+
+		case 16000:
+			return 16390;
+		break;
+
+		case 22000:
+			return 24585;
+		break;
+
+		case 44000:
+			return 49170;
+		break;
+
+		default:
+			return mixrate;
+		break;
+	}
+}
 
 /* end of atari_driver.c ... */
