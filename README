@@ -1,0 +1,24 @@
+
+just a few notes...
+
+- game is compilable using classic gnu binutils (make, gcc & stuff)
+
+- Makefile is really, really lame ;)
+
+- to get asm version you need define USE_M68K_ASM and to replace pragmas.o 
+  and a.o with their 68k versions (they are commented out in Makefile). 
+  I'm not sure in which state are these sources (there was some bug in one 
+  68k function) but it should work. But I don't recommend it at all...
+
+- the source includes very sophisticated devpac to gnu as converter, you 
+  need a perl package from sparemint distribution to run it
+
+- it's possible you'll get some compile errors -- i use some own <mint/*> 
+  includes (with constants from Atari Compendium) -- drop me a line if 
+  you're interested
+
+- engine/asm directory contains original amiga sources. but beware! they 
+  had to be changed since not everything can be handled by perl script! 
+  Concretly I don't remember ;)
+
+And that's it! Sources are under GPL ofcourse!
