@@ -247,7 +247,7 @@ int   DSL_BeginBufferedPlayback( char *BufferStart,
 	
 	Setbuffer( SR_PLAY, blank_buf[0], blank_buf[0] + _chunksize );
 	
-	Buffoper( PLAY_ENABLE | PLAY_REPEAT );	/* enable playback in loop mode */
+	Buffoper( SB_PLA_ENA | SB_PLA_RPT );	/* enable playback in loop mode */
 	
 	actsound=0;
 	#endif

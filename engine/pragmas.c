@@ -57,28 +57,40 @@ void clearbuf(void *buffer, int size, long fill_value) {
 
 void clearbufbyte(void *buffer, int size, long fill_value) {
   int lsize;
+  unsigned char *buffer8 = (unsigned char *)buffer;
+  unsigned short *buffer16 = (unsigned short *)buffer;
+  unsigned int *buffer32 = (unsigned int *)buffer;
   switch(size){
   case 0: return;
-  case 1: *((unsigned char*)buffer)++ = fill_value; return;
-  case 2: *((unsigned short*)buffer)++ = fill_value; return;
-  case 3: { unsigned char *p=buffer; p[2]=p[1]=p[0] = fill_value;} return;
+  case 1: *buffer8++ = fill_value; return;
+  case 2: *buffer16++ = fill_value; return;
+  case 3: { *buffer8++ = fill_value; *buffer8++ = fill_value; *buffer8++ = fill_value; } return;
   default:
 	if ((int)buffer&1) {
-		*((unsigned char*)buffer)++ = fill_value; size--;
+		*buffer8++ = fill_value; size--;
+		buffer = buffer8;
 	}
 	if ((int)buffer&2) {
-		*((unsigned short*)buffer)++ = fill_value; size-=2;
+		buffer16 = (unsigned short *)buffer;
+		*buffer16++ = fill_value; size-=2;
+		buffer = buffer16;
 	}
 	lsize = size>>2;
+	buffer32 = (unsigned int *)buffer;
 	while(lsize) {
-		*((unsigned int*)buffer)++ = fill_value;
+		*buffer32++ = fill_value;
 		lsize--;
 	}
+	buffer = buffer32;
 	if (size&2) {
-		*((unsigned short*)buffer)++ = fill_value;
+		buffer16 = (unsigned short *)buffer;
+		*buffer16++ = fill_value;
+		buffer = buffer16;
 	}
 	if (size&1) {
-		*((unsigned char*)buffer)++ = fill_value;
+		buffer8 = (unsigned char *)buffer;
+		*buffer8++ = fill_value;
+		buffer = buffer8;
 	}
   }
 }
@@ -123,7 +135,7 @@ void qinterpolatedown16short (long *source, int size, int linum, int linum_inc)
 	{
 		*((unsigned short *)source) = ((linum>>16)&0xffff);
 		linum += linum_inc;
-		((unsigned char*)source) = ((unsigned char*)source) + 2;
+		source = (long *)(((unsigned char*)source) + 2);
 		size--;
 		if (size == 0) return;
 	}

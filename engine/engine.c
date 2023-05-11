@@ -3922,7 +3922,7 @@ void nextpage(void)
 				dorotatesprite(per->sx,per->sy,per->z,per->a,per->picnum,
 									per->dashade,per->dapalnum,per->dastat,
 									per->cx1,per->cy1,per->cx2,per->cy2);
-				if (per->pagesleft&127) per->pagesleft--;
+			if (per->pagesleft&127) per->pagesleft--;
 			if (((per->pagesleft&127) == 0) && (i == permtail))
 				permtail = ((permtail+1)&(MAXPERMS-1));
 		}
@@ -4435,9 +4435,9 @@ static void ceilspritehline (long x2, long y)
 	long x1, v, bx, by;
 
 	/*
-	 * x = x1 + (x2-x1)t + (y1-y2)u  ³  x = 160v
-	 * y = y1 + (y2-y1)t + (x2-x1)u  ³  y = (scrx-160)v
-	 * z = z1 = z2                   ³  z = posz + (scry-horiz)v
+	 * x = x1 + (x2-x1)t + (y1-y2)u  ï¿½  x = 160v
+	 * y = y1 + (y2-y1)t + (x2-x1)u  ï¿½  y = (scrx-160)v
+	 * z = z1 = z2                   ï¿½  z = posz + (scry-horiz)v
      */
 
 	x1 = lastx[y]; if (x2 < x1) return;

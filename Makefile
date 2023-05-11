@@ -7,15 +7,15 @@
 BUILD_DEBUG_DIR=debug
 BUILD_RELEASE_DIR=release
 
-CC=gcc
-CC3=/root/download/atari-gcc/bin/gcc
+CC=m68k-atari-mint-gcc
+AS=m68k-atari-mint-as
 
-BASE_CFLAGS=-DPLATFORM_ATARI -DSTUB_NETWORKING -Iengine -funsigned-char	#-DUSE_M68K_ASM
-RELEASE_CFLAGS=$(BASE_CFLAGS) -g -Wall -m68060 -O3
+BASE_CFLAGS=-DPLATFORM_ATARI -DSTUB_NETWORKING -Iengine -funsigned-char -Wno-pointer-sign -Wno-unused-but-set-variable -Wno-unused-variable #-DUSE_M68K_ASM
+RELEASE_CFLAGS=$(BASE_CFLAGS) -s -Wall -m68020-60 -O2 -fomit-frame-pointer
 DEBUG_CFLAGS=$(BASE_CFLAGS) -g -Wall -m68020-60
 
-DO_CC=$(CC3) $(CFLAGS) -o $@ -c $<
-DO_AS=$(AS) -m68060 -o $@ $<
+DO_CC=$(CC) $(CFLAGS) -o $@ -c $<
+DO_AS=$(AS) -m68030 -o $@ $<
 
 #############################################################################
 # SETUP AND BUILD
@@ -24,12 +24,12 @@ DO_AS=$(AS) -m68060 -o $@ $<
 TARGETS=$(BUILDDIR)/duke3d.ttp
 
 build_debug:
-	@-mkdir $(BUILD_DEBUG_DIR) \
+	@mkdir -p $(BUILD_DEBUG_DIR) \
 		$(BUILD_DEBUG_DIR)/obj
 	$(MAKE) targets BUILDDIR=$(BUILD_DEBUG_DIR) CFLAGS="$(DEBUG_CFLAGS)"
 
 build_release:
-	@-mkdir $(BUILD_RELEASE_DIR) \
+	@mkdir -p $(BUILD_RELEASE_DIR) \
 		$(BUILD_RELEASE_DIR)/obj
 	$(MAKE) targets BUILDDIR=$(BUILD_RELEASE_DIR) CFLAGS="$(RELEASE_CFLAGS)"
 
@@ -86,9 +86,9 @@ AUDIO	= \
 	  
 $(BUILDDIR)/duke3d.ttp : $(ENGINE) $(GAME) $(AUDIO)
 	$(CC) $(CFLAGS) -o $@ $(ENGINE) $(GAME) $(AUDIO) $(LDFLAGS)
-	stack --fix=512k $(BUILDDIR)/duke3d.ttp
-	flags -S $(BUILDDIR)/duke3d.ttp
-	cp $(BUILDDIR)/duke3d.ttp .
+	m68k-atari-mint-stack --fix=512k $(BUILDDIR)/duke3d.ttp
+	m68k-atari-mint-flags -S $(BUILDDIR)/duke3d.ttp
+	mv $(BUILDDIR)/duke3d.ttp .
 
 #####
 
@@ -215,7 +215,7 @@ $(BUILDDIR)/obj/pragmas_68k.o:	engine/pragmas_68k.s
 #####
 
 clean:
-	-rm $(BUILD_DEBUG_DIR)/obj/*.o
-	-rm $(BUILD_RELEASE_DIR)/obj/*.o
-	-rm engine/*.BAK game/*.BAK
-	-rm duke3d.ttp
+	rm -f $(BUILD_DEBUG_DIR)/obj/*.o
+	rm -f $(BUILD_RELEASE_DIR)/obj/*.o
+	rm -f engine/*~ game/*~
+	rm -f duke3d.ttp
